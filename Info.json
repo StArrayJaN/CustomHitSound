@@ -1,0 +1,8 @@
+{
+  "Id": "CustomHitSound",
+  "DisplayName": "CustomHitSound",
+  "Author": "StArray",
+  "Version": "1.0.0",
+  "AssemblyName": "CustomHitSound.dll",
+  "EntryMethod": "CustomHitSound.Startup.Load"
+}
