@@ -1,9 +1,9 @@
 ﻿
 namespace CustomHitSound
 {
-    public class SetHitSound : ffxSetHitsound
+    public class SetHitSound
     {
-        public string filePath { get; set; }
-        public bool enableCustomHitSound { get; set; }
+        public string filePath;
+        public bool enableCustomHitSound;
     }
 }

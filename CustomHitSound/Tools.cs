@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reflection;
 using ADOFAI;
 using LightJson;
@@ -7,7 +8,7 @@ using UnityEngine.Audio;
 
 namespace CustomHitSound
 {
-    public static class Tools
+    public class Tools
     {
         public static JsonObject GetEvent(JsonArray array, LevelEventType name)
         {
@@ -58,6 +59,11 @@ namespace CustomHitSound
            FieldInfo fieldInfo = type.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
            fieldInfo?.SetValue(obj, value);
         }
-        
+
+        public static void log(object obj = null)
+        {
+            string obj2 = obj == null? "log" : obj.ToString();
+            MainClass.Logger.Log(obj2 + "\n" + new StackTrace(true));
+        }
     }
 }

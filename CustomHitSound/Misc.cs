@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
+using ADOFAI;
 using UnityEngine;
 
 namespace CustomHitSound
 {
-    public static class Misc
+    public class Misc
     {
-        public static List<HitSoundsData> hitSounds = new();
+        public static List<HitSoundsData> hitSoundDatas = new();
+        
     }
 
     public struct HitSoundsData
