@@ -4,5 +4,5 @@
   "Author": "StArray",
   "Version": "1.0.0",
   "AssemblyName": "CustomHitSound.dll",
-  "EntryMethod": "CustomHitSound.Startup.Load"
+  "EntryMethod": "CustomHitSound.Main.Setup"
 }

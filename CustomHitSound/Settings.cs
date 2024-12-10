@@ -1,0 +1,6 @@
+﻿using UnityModManagerNet;
+
+namespace CustomHitSound
+{
+    
+}

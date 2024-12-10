@@ -7,7 +7,8 @@ namespace CustomHitSound
     public class Misc
     {
         public static List<HitSoundsData> hitSoundDatas = new();
-        
+        public static Dictionary<ffxSetHitsound,LevelEvent> hitSounds = new();
+        public static int usedEventCount;
     }
 
     public struct HitSoundsData

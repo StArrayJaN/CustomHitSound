@@ -64,6 +64,9 @@
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>F:\Steam\steamapps\common\A Dance of Fire and Ice\A Dance of Fire and Ice_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>..\..\..\..\..\..\Program Files\Unity\Hub\Editor\2022.3.42f1c1\Editor\Data\Managed\UnityEngine\UnityEngine.IMGUIModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>F:\Steam\steamapps\common\A Dance of Fire and Ice\A Dance of Fire and Ice_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
@@ -93,12 +96,12 @@
     <Compile Include="AudioDownloader.cs" />
     <Compile Include="Json.cs" />
     <Compile Include="Languages.cs" />
-    <Compile Include="MainClass.cs" />
+    <Compile Include="Main.cs" />
     <Compile Include="Misc.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="PlaySound.cs" />
     <Compile Include="SetHitSound.cs" />
-    <Compile Include="Startup.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tools.cs" />
   </ItemGroup>

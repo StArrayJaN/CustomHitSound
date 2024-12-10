@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using ADOFAI;
 using HarmonyLib;
-using UnityEngine;
 using LightJson;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
@@ -13,14 +14,13 @@ namespace CustomHitSound
 {
     public class Patches
     {
-        public static Dictionary<ffxSetHitsound,LevelEvent> hitSounds = new();
+        public static double realBPM = 0;
         [HarmonyPatch(typeof(ADOStartup), "SetupLevelEventsInfo")]
         private static class Patch_ADOStartup_SetupLevelEventsInfo
         {
             public static bool Prefix()
             {
-                
-                Dictionary<string, object> dictionary = Json.Deserialize(InitEvent()) as Dictionary<string, object>;
+                Dictionary<string, object> dictionary = Json.Deserialize(InitEvent().ToString()) as Dictionary<string, object>;
                 GCS.levelEventsInfo = ADOStartup.DecodeLevelEventInfoList(dictionary["levelEvents"] as List<object>);
                 GCS.settingsInfo = ADOStartup.DecodeLevelEventInfoList(dictionary["settings"] as List<object>);
                 ADOStartup.DecodeLevelEventCategoryList(dictionary["categories"] as List<object>);
@@ -31,7 +31,7 @@ namespace CustomHitSound
                 return false;
             }
 
-            public static string InitEvent()
+            private static JsonObject InitEvent()
             {
                 var jsonObject = JsonValue.Parse(Resources.Load<TextAsset>("LevelEditorProperties").text).AsJsonObject;
                 JsonArray array = jsonObject["levelEvents"].AsJsonArray;
@@ -65,7 +65,7 @@ namespace CustomHitSound
                     .Add(false));
                 playSound.Add(customHitSound);
                 playSound.Add(audioFile);
-                return jsonObject.ToString();
+                return jsonObject;
             }
         }
         
@@ -77,10 +77,10 @@ namespace CustomHitSound
                 switch (key)
                 {
                     case "editor.enableCustomHitSound":
-                        __result = MainClass.language.enableHitSoundType;
+                        __result = Main.language.enableHitSoundType;
                         return false;
                     case "editor.selectAudioFile":
-                        __result = MainClass.language.selectAudioFile;
+                        __result = Main.language.selectAudioFile;
                         return false;
                 }
                 return true;
@@ -92,7 +92,15 @@ namespace CustomHitSound
         {
             public static void Postfix()
             {
-                MainClass.InitLanguage();
+                Main.InitLanguage();
+            }
+        }
+        [HarmonyPatch(typeof(RDString), "Setup")]
+        private static class Patch_RDString_Setup
+        {
+            public static void Postfix()
+            {
+                Main.InitLanguage();
             }
         }
         
@@ -119,11 +127,11 @@ namespace CustomHitSound
             {
                 if (evnt.eventType != LevelEventType.PlaySound && evnt.eventType != LevelEventType.SetHitsound)
                     return true;
+                
                 int num1 = customFloorID ?? evnt.floor;
                 scrFloor floor = floors[num1];
                 GameObject gameObject = floor.gameObject;
                 ffxPlusBase ffxPlusBase = null;
-                Debug.Log("");
                 switch (evnt.eventType)
                 {
                     case LevelEventType.SetHitsound:
@@ -131,7 +139,8 @@ namespace CustomHitSound
                         ffxSetHitsound.gameSound = (GameSound)evnt.data["gameSound"];
                         ffxSetHitsound.hitSound = (HitSound)evnt.data["hitsound"];
                         ffxSetHitsound.volume = evnt.GetInt("hitsoundVolume") / 100f;
-                        hitSounds.Add(ffxSetHitsound,evnt);
+                        if (evnt.GetBool("customHitSound")) Misc.usedEventCount++;
+                        Misc.hitSounds.Add(ffxSetHitsound,evnt);
                         floor.setHitsound = ffxSetHitsound;
                         break;
                     case LevelEventType.PlaySound:
@@ -140,6 +149,7 @@ namespace CustomHitSound
                         ffxPlaySound.hitSound = (HitSound)evnt.data["hitsound"];
                         ffxPlaySound.volume = evnt.GetInt("hitsoundVolume") / 100f;
                         ffxPlaySound.enableCustomHitSound = evnt.GetBool("customHitSound");
+                        if (evnt.GetBool("customHitSound")) Misc.usedEventCount++;
                         ffxPlaySound.filePath = evnt.GetString("selectAudioFile");
                         __result = ffxPlusBase;
                         break;
@@ -176,13 +186,12 @@ namespace CustomHitSound
                 return false;
             }
         }
-         [HarmonyPatch(typeof(scrConductor), nameof(scrConductor.PlayHitTimes))]
+        [HarmonyPatch(typeof(scrConductor), nameof(scrConductor.PlayHitTimes))]
         public class scrConductor_PlayHitTimes_Patch
         {
-            static string[] ints = new String[1]{"cao"};
             public static bool Prefix(scrConductor __instance)
             {
-                MainClass.Logger.Log(GCS.sceneToLoad);
+                Main.Logger.Log(GCS.sceneToLoad);
                 if (GCS.sceneToLoad != "scnEditor") return true;
                 scrConductor conductor = __instance;
                 List<scrFloor> listFloors = ADOBase.lm.listFloors;
@@ -239,12 +248,12 @@ namespace CustomHitSound
                                 hitSound2 =midspinHitSound;
                             
                             Tools.log("get setHitsound");
-                            var setHitSound2 = hitSounds[setHitsound];
-                            //                                         ↑
+                            LevelEvent setHitSound2 = Misc.hitSounds[setHitsound];
+                            //TODO:not execute!                         ↑
                             if (setHitSound2.GetBool("customHitSound"))
-                            {
+                            { 
                                 string audioUrl = Path.Combine(Path.GetDirectoryName(scnEditor.instance.customLevel.levelPath), setHitSound2.GetString("selectAudioFile"));
-                                AudioClip clip = MainClass.AudioDownloader.DownloadAudioClip(audioUrl);
+                                AudioClip clip = Main.AudioDownloader.DownloadAudioClip(audioUrl);
                                 Misc.hitSoundDatas.Add(new HitSoundsData(HitSound.None, time1, volume1, clip));
                                 Tools.log(6);
                             }
@@ -256,6 +265,58 @@ namespace CustomHitSound
                     }
                 }
                 return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(scrPlanet), "MoveToNextFloor")]
+        public class scrPlanet_MoveToNextFloor
+        {
+            public static void Prefix(scrPlanet __instance,scrFloor floor)
+            {
+                if (!ADOBase.isLevelEditor || !Main.settings.enableBPMLimiter) return;
+                if (floor.nextfloor != null)
+                {
+                    double entryTime = floor.entryTime;
+                    double nextEntryTime = floor.nextfloor.entryTime;
+                    float pitch = scnEditor.instance.customLevel.levelData.pitch / 100f;
+                    float playbackRate = scnEditor.instance.playbackSpeed;
+                    realBPM = 60 / (nextEntryTime - entryTime) * pitch * playbackRate;
+                    Tools.log(realBPM);
+                }
+
+                if (realBPM >= Main.settings.BPMLimit - 1 && Misc.usedEventCount > 0)
+                {
+                    scnEditor.instance.SwitchToEditMode();
+                    scnEditor.instance.ShowNotification(Main.language.bpmTooHighWarning, Color.red,
+                        Tools.calculateDelayTime());
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(scnEditor), "Play")]
+        public class scnEditor_Play
+        {
+            public static void Postfix(scnEditor __instance)
+            {
+                if (Main.settings.enableBPMLimiter)
+                {
+                    realBPM = 0;
+                    if (__instance.customLevel.levelData.bpm >= Main.settings.BPMLimit - 1 && Misc.usedEventCount > 0)
+                    {
+                        __instance.SwitchToEditMode();
+                        __instance.ShowNotification(Main.language.bpmTooHighWarning, Color.red,
+                            Tools.calculateDelayTime());
+                    }
+                }
+            }
+        }
+        
+        [HarmonyPatch(typeof(scnEditor),"SwitchToEditMode")]
+        public static class scnEditor_SwitchToEditMode
+        {
+            public static void Postfix()
+            {
+                Misc.usedEventCount = 0;
             }
         }
     }
