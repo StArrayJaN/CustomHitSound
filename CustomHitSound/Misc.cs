@@ -24,7 +24,7 @@ namespace CustomHitSound
             this.hitSound = hitSound;
             this.time = time;
             this.volume = volume;
-            this.played = false;
+            played = false;
             this.clip = clip;
         }
     }

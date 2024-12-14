@@ -100,8 +100,6 @@
     <Compile Include="Misc.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="PlaySound.cs" />
-    <Compile Include="SetHitSound.cs" />
-    <Compile Include="Settings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tools.cs" />
   </ItemGroup>

@@ -14,7 +14,6 @@ namespace CustomHitSound
 {
     public class Patches
     {
-        public static double realBPM = 0;
         [HarmonyPatch(typeof(ADOStartup), "SetupLevelEventsInfo")]
         private static class Patch_ADOStartup_SetupLevelEventsInfo
         {
@@ -104,15 +103,6 @@ namespace CustomHitSound
                 Main.InitLanguage();
             }
         }
-        
-        [HarmonyPatch(typeof(AudioManager), nameof(AudioManager.Play))]
-        public static class AudioManager_Play_Patch
-        {
-            public static void Prefix(string snd)
-            {
-                
-            }
-        }
 
         [HarmonyPatch(typeof(scnGame), nameof(scnGame.ApplyEvent))]
         private static class Patch_scnGame_ApplyEvent
@@ -180,7 +170,6 @@ namespace CustomHitSound
                             else
                                 continue;
                         }
-
                         ffxPlusBase.runManually = true;
                     }
                 }
@@ -194,96 +183,96 @@ namespace CustomHitSound
             public static bool Prefix(scrConductor __instance)
             {
                 if (Misc.usedEventCount == 0) return true;
-                try
+                scrConductor conductor = __instance;
+                List<scrFloor> listFloors = ADOBase.lm.listFloors;
+                bool useMidspinHitSound = false;
+                HitSound midspinHitSound = HitSound.Kick;
+                float volume1 = 1;
+                int num3 = GCS.checkpointNum < listFloors.Count ? GCS.checkpointNum + 1 : 1;
+                int index3 = GCS.practiceMode ? GCS.checkpointNum + GCS.practiceLength : listFloors.Count - 1;
+                LevelEvent currentEvent = null;
+                for (int i = 1; i < listFloors.Count; ++i)
                 {
-                    scrConductor conductor = __instance;
-                    List<scrFloor> listFloors = ADOBase.lm.listFloors;
-                    bool useMidspinHitSound = false;
-                    HitSound midspinHitSound = HitSound.Kick;
-                    float volume1 = 1;
-                    int num3 = GCS.checkpointNum < listFloors.Count ? GCS.checkpointNum + 1 : 1;
-                    int index3 = GCS.practiceMode ? GCS.checkpointNum + GCS.practiceLength : listFloors.Count - 1;
-                    LevelEvent currentEvent = null;
-                    for (int i = 1; i < listFloors.Count; ++i)
+                    scrFloor scrFloor1 = listFloors[i];
+                    ffxSetHitsound setHitsound = scrFloor1.setHitsound;
+
+                    HitSound hitSound1 = conductor.hitSound;
+                    if (setHitsound != null)
                     {
-                        scrFloor scrFloor1 = listFloors[i];
-                        ffxSetHitsound setHitsound = scrFloor1.setHitsound;
 
-                        HitSound hitSound1 = conductor.hitSound;
-                        if (setHitsound != null)
+                        if (setHitsound.gameSound == GameSound.Midspin)
                         {
-
-                            if (setHitsound.gameSound == GameSound.Midspin)
+                            useMidspinHitSound = true;
+                            midspinHitSound = setHitsound.hitSound;
+                        }
+                        else
+                        {
+                            hitSound1 = setHitsound.hitSound;
+                            var hasSetMidspinHitsound =
+                                Tools.GetPrivateField<bool>(conductor, "hasSetMidspinHitsound");
+                            if (!hasSetMidspinHitsound)
                             {
-                                useMidspinHitSound = true;
-                                midspinHitSound = setHitsound.hitSound;
+                                hasSetMidspinHitsound = true;
+                                midspinHitSound = hitSound1;
+                            }
+                        }
+                        volume1 = setHitsound.volume;
+                    }
+
+                    if (ADOBase.lm.listFloors[i].holdLength <= -1 &&
+                        ADOBase.lm.listFloors[i - 1].holdLength <= -1 &&
+                        (!ADOBase.lm.listFloors[i - 1].midSpin ||
+                         i < 2 ||
+                         ADOBase.lm.listFloors[i - 2].holdLength <= -1))
+                    {
+                        scrFloor scrFloor2 = listFloors[i - 1];
+                        double num5 = 0.0;
+                        ADOBase.gc.hitSoundOffsets.TryGetValue(
+                            !(scrFloor2 != null) || !scrFloor2.midSpin || useMidspinHitSound
+                                ? hitSound1
+                                : midspinHitSound, out num5);
+                        double time1 = conductor.dspTimeSongPosZero + scrFloor1.entryTimePitchAdj - num5;
+
+                        if (i >= num3 && i <= index3 && time1 > conductor.dspTime && !scrFloor1.midSpin &&
+                            hitSound1 != HitSound.None)
+                        {
+                            HitSound hitSound2 = !(scrFloor2 != null) || !scrFloor2.midSpin || !useMidspinHitSound
+                                ? hitSound1
+                                : midspinHitSound;
+                            if (scrFloor1.tapsNeeded > 1)
+                                hitSound2 = midspinHitSound;
+                            if (Misc.hitSounds.TryGetValue(i, out var setHitSound2)) currentEvent = setHitSound2;
+                            Tools.log("getValue:" + currentEvent.GetString("selectAudioFile"));
+                            if (currentEvent.GetBool("customHitSound") &&
+                                !string.IsNullOrEmpty(currentEvent.GetString("selectAudioFile")))
+                            {
+                                string audioUrl =
+                                    Path.Combine(Path.GetDirectoryName(scnEditor.instance.customLevel.levelPath),
+                                        currentEvent.GetString("selectAudioFile"));
+                                Tools.log("Add:" + audioUrl + " at " + time1 + " with volume " + volume1);
+                                AudioClip clip = Main.AudioDownloader.DownloadAudioClip(audioUrl);
+                                Misc.hitSoundDatas.Add(new HitSoundsData(HitSound.None, time1, volume1, clip));
+                                Tools.log("Added:" + audioUrl + " at " + time1 + " with volume " + volume1);
                             }
                             else
                             {
-                                hitSound1 = setHitsound.hitSound;
-                                var hasSetMidspinHitsound =
-                                    Tools.GetPrivateField<bool>(conductor, "hasSetMidspinHitsound");
-                                if (!hasSetMidspinHitsound)
-                                {
-                                    hasSetMidspinHitsound = true;
-                                    midspinHitSound = hitSound1;
-                                }
-                            }
-
-                            volume1 = setHitsound.volume;
-                        }
-
-                        if (ADOBase.lm.listFloors[i].holdLength <= -1 &&
-                            ADOBase.lm.listFloors[i - 1].holdLength <= -1 &&
-                            (!ADOBase.lm.listFloors[i - 1].midSpin ||
-                             i < 2 ||
-                             ADOBase.lm.listFloors[i - 2].holdLength <= -1))
-                        {
-                            scrFloor scrFloor2 = listFloors[i - 1];
-                            double num5 = 0.0;
-                            ADOBase.gc.hitSoundOffsets.TryGetValue(
-                                !(scrFloor2 != null) || !scrFloor2.midSpin || useMidspinHitSound
-                                    ? hitSound1
-                                    : midspinHitSound, out num5);
-                            double time1 = conductor.dspTimeSongPosZero + scrFloor1.entryTimePitchAdj - num5;
-
-                            if (i >= num3 && i <= index3 && time1 > conductor.dspTime && !scrFloor1.midSpin &&
-                                hitSound1 != HitSound.None)
-                            {
-                                HitSound hitSound2 = !(scrFloor2 != null) || !scrFloor2.midSpin || !useMidspinHitSound
-                                    ? hitSound1
-                                    : midspinHitSound;
-                                if (scrFloor1.tapsNeeded > 1)
-                                    hitSound2 = midspinHitSound;
-                                if (Misc.hitSounds.TryGetValue(i, out var setHitSound2)) currentEvent = setHitSound2;
-                                Tools.log("getValue:" + currentEvent.GetString("selectAudioFile"));
-                                if (currentEvent.GetBool("customHitSound") &&
-                                    !string.IsNullOrEmpty(currentEvent.GetString("selectAudioFile")))
-                                {
-                                    string audioUrl =
-                                        Path.Combine(Path.GetDirectoryName(scnEditor.instance.customLevel.levelPath),
-                                            currentEvent.GetString("selectAudioFile"));
-                                    Tools.log("Add:" + audioUrl + " at " + time1 + " with volume " + volume1);
-                                    AudioClip clip = Main.AudioDownloader.DownloadAudioClip(audioUrl);
-                                    Misc.hitSoundDatas.Add(new HitSoundsData(HitSound.None, time1, volume1, clip));
-                                    Tools.log("Added:" + audioUrl + " at " + time1 + " with volume " + volume1);
-                                }
-                                else
-                                {
-                                    Misc.hitSoundDatas.Add(new HitSoundsData(hitSound2, time1, volume1));
-                                }
+                                Misc.hitSoundDatas.Add(new HitSoundsData(hitSound2, time1, volume1));
                             }
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    Tools.log(e,true);
                 }
                 return true;
             }
         }
         
+        [HarmonyPatch(typeof(scrConductor), "Update")]
+        public class scrConductor_Update
+        {
+            public static bool Prefix(scrConductor __instance)
+            {
+                return true;
+            }
+        }
         [HarmonyPatch(typeof(scnEditor), "Play")]
         public class scnEditor_Play
         {
