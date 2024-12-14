@@ -191,8 +191,7 @@ namespace CustomHitSound
         {
             public static bool Prefix(scrConductor __instance)
             {
-                Main.Logger.Log(GCS.sceneToLoad);
-                if (GCS.sceneToLoad != "scnEditor") return true;
+                if (Misc.usedEventCount == 0) return true;
                 scrConductor conductor = __instance;
                 List<scrFloor> listFloors = ADOBase.lm.listFloors;
                 bool useMidspinHitSound = false;
@@ -281,9 +280,7 @@ namespace CustomHitSound
                     float pitch = scnEditor.instance.customLevel.levelData.pitch / 100f;
                     float playbackRate = scnEditor.instance.playbackSpeed;
                     realBPM = 60 / (nextEntryTime - entryTime) * pitch * playbackRate;
-                    Tools.log(realBPM);
                 }
-
                 if (realBPM >= Main.settings.BPMLimit - 1 && Misc.usedEventCount > 0)
                 {
                     scnEditor.instance.SwitchToEditMode();
@@ -308,6 +305,14 @@ namespace CustomHitSound
                             Tools.calculateDelayTime());
                     }
                 }
+            }
+        }
+        [HarmonyPatch(typeof(scnEditor), "OnGUI")]
+        public class scnEditor_OnGUI 
+        {
+            private static void Postfix()
+            {
+                GUI.Label(new (100,100,100,100),"BPM:" +realBPM);
             }
         }
         

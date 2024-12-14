@@ -28,9 +28,31 @@ namespace CustomHitSound
         {
             public bool enableBPMLimiter;
             public float BPMLimit = 20000;
-        
+            private GUIStyle _style;
+            private string author = "Custom Hit Sound By <color=#ff0000>S</color>"+
+                                    "<color=#ff8000>t</color>"+
+                                    "<color=#ffff00>A</color>"+
+                                    "<color=#00ff00>r</color>"+
+                                    "<color=#0000ff>r</color>"+
+                                    "<color=#8000ff>a</color>"+
+                                    "<color=#ff00ff>y</color>";
             public void OnGUI(UnityModManager.ModEntry modEntry)
             {
+                if (_style == null)
+                {
+                    _style = new GUIStyle(GUI.skin.label);
+                }
+                var currentEvent = Event.current;
+                var mousePosition = currentEvent.mousePosition;
+                var content = new GUIContent(author);
+                var rect = GUILayoutUtility.GetRect(content,_style);
+                GUI.Label(rect,content,_style);
+                if (rect.Contains(mousePosition) && currentEvent.type == EventType.MouseDown &&
+                    currentEvent.button == 0)
+                {
+                    Application.OpenURL("https://space.bilibili.com/425111197");
+                }
+                
                 enableBPMLimiter = GUILayout.Toggle(enableBPMLimiter,language.enableBPMLimiter);
                 if (enableBPMLimiter)
                 { 
