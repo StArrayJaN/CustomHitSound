@@ -76,10 +76,11 @@ namespace CustomHitSound
             methodInfo?.Invoke(instance, args);
         }
 
-        public static void log(object obj = null)
+        public static void log(object info = null,bool printStack = false)
         {
-            string obj2 = obj == null? "log" : obj.ToString();
-            Main.Logger.Log(obj2 + "\n" + new StackTrace(true));
+            string message = info == null? "log" : info.ToString();
+            string stack = printStack ? "\n" + new StackTrace(true) : "";
+            Main.Logger.Log(message + stack);
         }
 
         public static float calculateDelayTime()
